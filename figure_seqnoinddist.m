@@ -2,35 +2,42 @@ clear variables;
 reload = false;
 if reload
 	nRuns = 1000;
-	N = 2e6;
 	load('results/gammas_2e6_from2e5.mat');
 
 	rs = [0.1, 0.5, 0.7, 0.8, 0.95];
 	epsilon = 0.01;
+    xi = 0.3;
 
-	T = N*ones(length(rs),nRuns);
+	T = ones(length(rs),nRuns);
 	for k=1:nRuns
 		gamma = gammas(k);
-		fname = sprintf('results/odemcmc-jakstat-1-2000000-50000-1-%d.mat',k);
+		fname = sprintf('~/data/phd/mcmchyp/odemcmc-jakstat-1-2000000-50000-1-%d.mat',k);
 		fprintf('Reading %s\n',fname);
 		load(fname);
 		sfx = cumsum(f);
 		N = length(f);
+		n0 = floor(100/gamma);
+		imax = floor(log(N/n0)/log(1+xi));
+		ntest = floor(n0*(1+xi).^(1:imax));
+            
+		g = sqrt((ntest/gamma) .* (log(1/epsilon) + 1 + 2*log(1:imax)))';
 		for i=1:length(rs)
 			r = rs(i);
-			g = sqrt((1:N)/gamma * log(1/epsilon) + 1 + 2*log(1:N))';
-			L = (1:N)'*r - g;
-			U = (1:N)'*r + g;
-			tj = find(sfx<L | sfx>U,1,'first');
+			
+			L = ntest'*r - g;
+			U = ntest'*r + g;
+			tj = find(sfx(ntest)<L | sfx(ntest)>U,1,'first');
 			if ~isempty(tj)
-				T(i,k) = tj;
+				T(i,k) = ntest(tj);
 			else
 				T(i,k) = nan;
 			end
 		end
 	end
+	save('results/figure_seqnoinddist_dat.mat',...
+		'T','xi','rs','nRuns','epsilon')
 else
-	load('results/fig_seqnoinddist_dat.mat');
+	load('results/figure_seqnoinddist_dat.mat');
 end
 
 
@@ -57,7 +64,8 @@ for i=1:length(rs)
 end
 
 legend(legends,'location','SouthEast');
-xlim([0,1e6]);
+xlim([0,2e6]);
+set(gca,'xscale','log')
 ylim([0 1])
 grid off;
 xlabel('Number of samples','FontSize',12);

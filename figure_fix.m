@@ -16,7 +16,7 @@ if reload
 	fn = zeros(length(deltas),length(Ns));
 	fp = zeros(length(deltas),length(Ns));
 	for k=1:nRuns
-		fname = sprintf('results/odemcmc-jakstat-1-2000000-50000-1-%d.mat',k);
+		fname = sprintf('/home/beni/data/phd/mcmchyp/odemcmc-jakstat-1-2000000-50000-1-%d.mat',k);
 		fprintf('Reading %s\n',fname);
 		f = load(fname);
 		sfx = cumsum(f.f);

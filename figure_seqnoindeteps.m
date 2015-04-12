@@ -3,7 +3,6 @@ clear variables;
 reload = false;
 if reload
 	mtrue = 0.88746;
-	delta = 0.05;
 	nRuns = 1000;
 	load('results/gammas_2e6_from2e5.mat');
 
@@ -16,9 +15,11 @@ if reload
 	ET = 1e8*ones(length(rs),length(epsilons));
 	T = nan(nRuns,length(rs),length(epsilons));
 	Nfix = zeros(nRuns,length(epsilons));
+	
+	xi = 0.3;
 
 	for i=1:nRuns
-		fname = sprintf('results/odemcmc-jakstat-1-2000000-50000-1-%d.mat',i);
+		fname = sprintf('~/data/phd/mcmchyp/odemcmc-jakstat-1-2000000-50000-1-%d.mat',i);
 		fprintf('Reading %s\n',fname);
 		load(fname);
 		sfx = cumsum(f);
@@ -27,17 +28,21 @@ if reload
 
 		for j=1:length(rs)
 			r = rs(j);
-			sfxz = sfx-(1:N)'*r;
+			
+			n0 = floor(100/gamma);
+			imax = floor(log(N/n0)/log(1+xi));
+			ntest = floor(n0*(1+xi).^(1:imax));
+			
+			sfxz(ntest) = sfx(ntest)-ntest'*r;
 			for k=1:length(epsilons)
 				epsilon = epsilons(k);
-				g = sqrt((1:N)/gamma * log(1/epsilon) + 1 + 2*log(1:N))';
-				tj = find(abs(sfxz)>g,1,'first');
-				Nfix(i,k) = log(1/epsilon)/(gamma*delta^2);
+				g = sqrt((ntest/gamma) .* (log(1/epsilon) + 1 + 2*log(1:imax)));
+				tj = find(abs(sfxz(ntest))>g,1,'first');
 				if ~isempty(tj)
-					T(i,j,k) = tj;
-					if (r < mtrue) && (sfxz(tj) < 0)
+					T(i,j,k) = ntest(tj);
+					if (r < mtrue) && (sfxz(ntest(tj)) < 0)
 						errs(j,k) = errs(j,k) + 1;
-					elseif (r > mtrue) && (sfxz(tj) > 0)
+					elseif (r > mtrue) && (sfxz(ntest(tj)) > 0)
 						errs(j,k) = errs(j,k) + 1;
 					end
 				end
@@ -54,6 +59,8 @@ if reload
 			end
 		end
 	end
+	save('results/figure_seqnoindeteps_dat.mat',...
+		'ET','xi','rs','epsilons','nRuns')
 else
 	load('results/figure_seqnoindeteps_dat.mat');
 end
@@ -71,6 +78,7 @@ plot(rs,ET(:,2),'-','markers',markersize);
 plot(rs,ET(:,3),'-','markers',markersize);
 legend({'\epsilon=0.01','\epsilon=0.02','\epsilon=0.05'});
 ylim([0 1e6]);
+set(gca,'yscale','linear')
 xlabel('Probability threshold (r)','FontSize',12);
 ylabel('Average stopping time (number of samples)','FontSize',12);
 set(findall(gcf,'type','text'),'FontSize',16)
